@@ -51,11 +51,11 @@ const DEFAULT_USERS = [
 ];
 
 // All importable columns
-const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_bloqueio","motivo_bloqueio_texto","razao_bloq","num_cassete"];
+const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_de_bloqueio","motivo_bloqueio_texto","razao_bloq","num_cassete"];
 const COL_LABELS = {
   pedido:"Pedido", item:"Item", material:"Material", descricao:"Descrição", data_bloqueio:"Data Bloqueio",
   ultima_ordem:"Última Ordem", lote:"Lote", ippn:"IPPN", qualidade_qts:"Qualidade QTS",
-  deposito_sap:"Depósito SAP", motivo_bloqueio:"Motivo de Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
+  deposito_sap:"Depósito SAP", motivo_de_bloqueio:"Motivo de Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
   razao_bloq:"Razão Bloq.", num_cassete:"Nº Cassete",
 };
 
@@ -115,7 +115,7 @@ function groupByLote(rows) {
       pedido:row.pedido||"",item:row.item||"",material:row.material||"",
       descricao:row.descricao||"",data_bloqueio:row.data_bloqueio||"",
       ultima_ordem:row.ultima_ordem||"",qualidade_qts:row.qualidade_qts||"",
-      deposito_sap:row.deposito_sap||"",motivo_bloqueio:row.motivo_bloqueio||"",
+      deposito_sap:row.deposito_sap||"",motivo_de_bloqueio:row.motivo_de_bloqueio||"",
     });
     map.get(key).rows.push(row);
   });
@@ -359,7 +359,7 @@ function ImportStep({onImport}){
   }
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0]);},[]);
 
-  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_bloqueio"];
+  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_de_bloqueio"];
   return(
     <div>
       <div style={{fontSize:22,fontWeight:800,color:"#1C1C1E",letterSpacing:"-0.4px",marginBottom:4}}>Importar Tubos Bloqueados</div>
@@ -526,7 +526,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
                   <td style={{...TD(false),background:bg}}>{group.material||"—"}</td>
                   <td style={{...TD(false),background:bg}}>{group.ultima_ordem||"—"}</td>
                   <td style={{...TD(false),background:bg}}>{group.deposito_sap||"—"}</td>
-                  <td style={{...TD(false),background:bg}}>{group.motivo_bloqueio||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.motivo_de_bloqueio||"—"}</td>
                   <td style={{...TD(false),background:gi%2===0?"rgba(26,90,42,0.03)":"rgba(26,90,42,0.06)"}}>
                     {canInteract?(<input type="text" style={{border:"1.5px solid #E5E5EA",borderRadius:7,padding:"5px 9px",fontSize:11,width:"100%",outline:"none",background:"#fff",minWidth:160}} placeholder="Tratativa do lote…" value={tratativas[group.lote]??group.tratativa??""} onChange={e=>setTratativas(t=>({...t,[group.lote]:e.target.value}))}/>):(<span style={{fontSize:11,color:"#555"}}>{group.tratativa||"—"}</span>)}
                   </td>
@@ -537,7 +537,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
                 // G1 row: Pedido / Item / Material / Descrição
                 ...(isG1?[<tr key={`g1-${group.lote}`} style={{background:"#FFF9F0"}}><td colSpan={canInteract?4:3}></td><td colSpan={2} style={{padding:"8px 11px",fontSize:11,color:"#B45309",fontWeight:700}}>📦 Grupo 1</td><td style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Ped:</span> {group.pedido||"—"}</td><td style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Item:</span> {group.item||"—"}</td><td style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Mat:</span> {group.material||"—"}</td><td colSpan={3} style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Desc:</span> {fr.descricao||"—"}</td><td colSpan={2}></td>{stage.id>1&&<td></td>}</tr>]:[]),
                 // G2 row: Última Ordem / QTS / Depósito / Motivo
-                ...(isG2?[<tr key={`g2-${group.lote}`} style={{background:"#FFF3E0"}}><td colSpan={canInteract?4:3}></td><td colSpan={2} style={{padding:"8px 11px",fontSize:11,color:"#E8890A",fontWeight:700}}>🗂 Grupo 2</td><td colSpan={2} style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Última Ord:</span> {group.ultima_ordem||"—"} &nbsp;|&nbsp; <span style={{fontWeight:600}}>QTS:</span> {group.qualidade_qts||fr.qualidade_qts||"—"}</td><td style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Depósito:</span> {group.deposito_sap||"—"}</td><td colSpan={3} style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Motivo:</span> {group.motivo_bloqueio||"—"} — {fr.motivo_bloqueio_texto||"—"}</td><td></td>{stage.id>1&&<td></td>}</tr>]:[]),
+                ...(isG2?[<tr key={`g2-${group.lote}`} style={{background:"#FFF3E0"}}><td colSpan={canInteract?4:3}></td><td colSpan={2} style={{padding:"8px 11px",fontSize:11,color:"#E8890A",fontWeight:700}}>🗂 Grupo 2</td><td colSpan={2} style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Última Ord:</span> {group.ultima_ordem||"—"} &nbsp;|&nbsp; <span style={{fontWeight:600}}>QTS:</span> {group.qualidade_qts||fr.qualidade_qts||"—"}</td><td style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Depósito:</span> {group.deposito_sap||"—"}</td><td colSpan={3} style={{padding:"8px 11px",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Motivo:</span> {group.motivo_de_bloqueio||"—"} — {fr.motivo_bloqueio_texto||"—"}</td><td></td>{stage.id>1&&<td></td>}</tr>]:[]),
                 // IPPN expanded rows
                 ...(isExp?group.rows.map((row,ri)=><tr key={`exp-${row._id}`} style={{background:"#F0F7FF"}}>{canInteract&&<td></td>}<td style={{padding:"7px 8px",borderBottom:"1px solid #E8F4FD",textAlign:"center"}}><span style={{fontSize:9,color:"#8E8E93"}}>└</span></td><td colSpan={3} style={{padding:"7px 11px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#1A6FA8",fontWeight:600}}>IPPN {ri+1}: {row.ippn||"—"}</td><td style={{padding:"7px 11px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Cassete:</span> {row.num_cassete||"—"}</td><td colSpan={2} style={{padding:"7px 11px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Data Bloqueio:</span> {row.data_bloqueio||"—"}</td><td colSpan={2} style={{padding:"7px 11px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#555"}}><span style={{fontWeight:600}}>Razão:</span> {row.razao_bloq||"—"}</td><td colSpan={3} style={{borderBottom:"1px solid #E8F4FD"}}></td>{stage.id>1&&<td style={{borderBottom:"1px solid #E8F4FD"}}></td>}</tr>):[]),
               ];
@@ -781,7 +781,7 @@ function HistoricoPage({historyRows}){
                       <td style={TD(alt)}>{group.item||"—"}</td>
                       <td style={TD(alt)}>{group.material||"—"}</td>
                       <td style={TD(alt)}>{group.deposito_sap||"—"}</td>
-                      <td style={TD(alt)}>{group.motivo_bloqueio||"—"}</td>
+                      <td style={TD(alt)}>{group.motivo_de_bloqueio||"—"}</td>
                       <td style={TD(alt)}>{fr.data_bloqueio||"—"}</td>
                       <td style={TD(alt)}>
                         {fr.history?.length>0?<details><summary style={{fontSize:10,color:"#34C759",cursor:"pointer",fontWeight:700}}>✓ {fr.history.length} etapa{fr.history.length!==1?"s":""}</summary><div style={{marginTop:5}}>{fr.history.map((h,hi)=><div key={hi} style={{fontSize:10,color:"#3A3A3C",marginBottom:5,borderLeft:"2px solid #34C759",paddingLeft:7,lineHeight:1.55}}><strong>{h.stageLabel}</strong><br/>{h.user}{h.tratativa&&<><br/><em>"{h.tratativa}"</em></>}<br/><span style={{color:"#C7C7CC"}}>{h.date}</span></div>)}</div></details>:<span style={{color:"#C7C7CC",fontSize:11}}>—</span>}
