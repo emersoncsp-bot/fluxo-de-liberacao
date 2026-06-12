@@ -7,22 +7,22 @@ import * as XLSX from "xlsx";
 // ─────────────────────────────────────────────────────────────────────────────
 const STAGES = [
   { id:1, label:"Análise do Bloqueio",    short:"Análise de Bloqueio",  dept:"CQ Área Técnica" },
-  { id:2, label:"Definição do Recurso",   short:"Análise de Recurso",   dept:"Planejamento UAP" },
-  { id:3, label:"Criação de Ordem",       short:"Definição de Ordem",   dept:"Planejamento Central" },
-  { id:4, label:"Instrução da Qualidade", short:"Instrução",            dept:"CQ Área Técnica" },
-  { id:5, label:"Liberação para Vínculo", short:"Lib. Vínculo",         dept:"CQ Lib. Intermediária" },
+  { id:2, label:"Definição do Recurso",   short:"Avaliar Recurso",      dept:"Planejamento UAP" },
+  { id:3, label:"Criação de Ordem",       short:"Criar Ordem",          dept:"Planejamento Central" },
+  { id:4, label:"Instrução da Qualidade", short:"Atualizar IC",         dept:"CQ Área Técnica" },
+  { id:5, label:"Liberação para Vínculo", short:"Desbloqueio",          dept:"CQ Lib. Intermediária" },
   { id:6, label:"Vínculo dos Lotes",      short:"Vínculo",              dept:"Planejamento UAP" },
   { id:7, label:"Ativação de Flag",       short:"Flag",                 dept:"CQ Lib. Intermediária" },
-  { id:8, label:"Pendente Execução",      short:"Pend. Execução",       dept:"CQ Lib. Intermediária" },
+  { id:8, label:"Pendente Execução",      short:"Execução",             dept:"CQ Lib. Intermediária" },
 ];
 
 const STAGE_COLORS = ["#007AFF","#34C759","#FF9500","#AF52DE","#FF2D55","#5AC8FA","#FF6B35","#8E8E93"];
 
 const DEPT_FULL = {
-  "CQ Área Técnica":       "Controle da Qualidade [Área técnica]",
+  "CQ Área Técnica":       "Controle da Qualidade",
   "Planejamento UAP":      "Planejamento UAP",
   "Planejamento Central":  "Planejamento Central",
-  "CQ Lib. Intermediária": "Controle da Qualidade [Liberação Intermediária]",
+  "CQ Lib. Intermediária": "Liberação de produtos",
   "Admin":                 "Administrador",
 };
 
@@ -52,15 +52,15 @@ const DEFAULT_USERS = [
 ];
 
 // All importable columns
-const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_de_bloqueio","motivo_bloqueio_texto","razao_bloq","num_cassete"];
+const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_bloqueio","motivo_bloqueio_texto","razao_bloq","descricao_motivo","num_cassete"];
 const COL_LABELS = {
   pedido:"Pedido", item:"Item", material:"Material", descricao:"Descrição", data_bloqueio:"Data Bloqueio",
   ultima_ordem:"Última Ordem", lote:"Lote", ippn:"IPPN", qualidade_qts:"Qualidade QTS",
-  deposito_sap:"Depósito SAP", motivo_de_bloqueio:"Motivo de Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
-  razao_bloq:"Razão Bloq.", num_cassete:"Nº Cassete",
+  deposito_sap:"Depósito SAP", motivo_bloqueio:"Motivo Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
+  razao_bloq:"Razão Bloq.", descricao_motivo:"Descrição Motivo", num_cassete:"Nº Cassete",
 };
 
-// Options for "Recursos necessários" (Etapa 1)
+// Options for "Definição" na Etapa 1 (recursos necessários)
 const RECURSOS_OPTIONS = ["Inspeção VD","Inspeção Ultrassom","Serra","Inspeção EMI","Inspeção de Drift","Faceamento"];
 
 // Shared layout container (keeps pipeline + content aligned)
@@ -144,7 +144,9 @@ function groupByLote(rows) {
       pedido:row.pedido||"",item:row.item||"",material:row.material||"",
       descricao:row.descricao||"",data_bloqueio:row.data_bloqueio||"",
       ultima_ordem:row.ultima_ordem||"",qualidade_qts:row.qualidade_qts||"",
-      deposito_sap:row.deposito_sap||"",motivo_de_bloqueio:row.motivo_de_bloqueio||"",
+      deposito_sap:row.deposito_sap||"",motivo_bloqueio:row.motivo_bloqueio||"",
+      motivo_bloqueio_texto:row.motivo_bloqueio_texto||"",razao_bloq:row.razao_bloq||"",
+      descricao_motivo:row.descricao_motivo||"",
     });
     map.get(key).rows.push(row);
   });
@@ -167,7 +169,7 @@ function rowMatchesSearch(row, filters) {
 
 function initStageData() { return {1:[],2:[],3:[],4:[],5:[],6:[],7:[],8:[]}; }
 
-// Format a duration in days (per requirement: unit = "dias")
+// Format a duration in days (unit = "dias")
 function formatDuration(ms) {
   if(!ms||ms<=0) return "—";
   const days = ms/86400000;
@@ -210,6 +212,12 @@ function computeTimingStats(stageData, historyRows) {
   return { stageAvg, deptAvg };
 }
 
+// Render a recurso/tratativa ("Definição") value — handles array (Etapa 1) or string
+function renderTratativaValue(v){
+  if(Array.isArray(v)) return v.length?v.join(", "):"—";
+  return v||"—";
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SMALL UI ATOMS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +241,23 @@ const INP = {width:"100%",border:"1.5px solid #E5E5EA",borderRadius:9,padding:"9
 const TH_DARK = {background:"#0A2240",padding:"9px 11px",textAlign:"left",fontWeight:700,color:"#fff",borderBottom:"2px solid #1A3A5C",whiteSpace:"nowrap",fontSize:11,position:"sticky",top:0,zIndex:10};
 const TH_GREEN = {...{background:"#0A2240",padding:"9px 11px",textAlign:"left",fontWeight:700,color:"#fff",borderBottom:"2px solid #1A3A5C",whiteSpace:"nowrap",fontSize:11,position:"sticky",top:0,zIndex:10}, background:"#1A5C2A",borderBottom:"2px solid #1A7A3A"};
 const TD = (alt)=>({padding:"9px 11px",borderBottom:"1px solid #F0F0F5",verticalAlign:"middle",fontSize:12,color:"#1C1C1E",background:alt?"#F8F9FB":"#fff"});
+
+// Side-by-side history cards (one card per stage record) — used in StageView + Histórico
+function HistoryCards({history}){
+  if(!history || history.length===0) return <span style={{color:"#C7C7CC",fontSize:11}}>—</span>;
+  return(
+    <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2,maxWidth:480}}>
+      {history.map((h,hi)=>(
+        <div key={hi} style={{minWidth:140,maxWidth:160,flexShrink:0,border:"1px solid #E5E5EA",borderRadius:8,padding:"6px 9px",background:"#F8F9FB"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#1C1C1E",marginBottom:4,lineHeight:1.3}}>{h.stage}. {h.stageLabel}</div>
+          <div style={{fontSize:10,color:"#007AFF",fontWeight:600,marginBottom:4,lineHeight:1.3,wordBreak:"break-word"}}>{renderTratativaValue(h.tratativa)}</div>
+          <div style={{fontSize:9,color:"#3A3A3C",fontWeight:600,marginBottom:1}}>{h.user}</div>
+          <div style={{fontSize:9,color:"#C7C7CC"}}>{h.date}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Multi-select "dropdown" for Etapa 1 — uses a portal so it isn't clipped by the scroll container
 function RecursosSelect({value,onChange,readOnly}){
@@ -266,7 +291,7 @@ function RecursosSelect({value,onChange,readOnly}){
   return(
     <>
       <button ref={btnRef} type="button" onClick={()=>open?setOpen(false):openPanel()} style={{width:"100%",minWidth:170,textAlign:"left",border:"1.5px solid #E5E5EA",borderRadius:7,padding:"5px 8px",fontSize:11,background:"#fff",cursor:"pointer",color:arr.length?"#1C1C1E":"#8E8E93",display:"flex",justifyContent:"space-between",gap:4,alignItems:"center"}}>
-        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{arr.length?arr.join(", "):"Selecionar recursos…"}</span>
+        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{arr.length?arr.join(", "):"Selecionar…"}</span>
         <span style={{fontSize:9,flexShrink:0,color:"#8E8E93"}}>▾</span>
       </button>
       {open&&createPortal(
@@ -437,7 +462,7 @@ function ImportStep({onImport}){
   }
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0]);},[]);
 
-  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_de_bloqueio","data_bloqueio"];
+  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_bloqueio","data_bloqueio"];
   return(
     <div>
       <div style={{fontSize:22,fontWeight:800,color:"#1C1C1E",letterSpacing:"-0.4px",marginBottom:4}}>Importar Tubos Bloqueados</div>
@@ -485,9 +510,6 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
   const [confirmAdv,setConfirmAdv]=useState(false);
   const [confirmRet,setConfirmRet]=useState(false);
   const [confirmDone,setConfirmDone]=useState(false);
-  // Lateral column groups (outline-style show/hide)
-  const [showG1,setShowG1]=useState(true); // Pedido / Item / Material / Descrição
-  const [showG2,setShowG2]=useState(true); // Última Ordem / QTS / Depósito / Motivo
 
   const isStage8 = stage.id===8;
   const isStage1 = stage.id===1;
@@ -526,12 +548,6 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
   const selCount=rows.filter(r=>selLotes.has(r.lote||r._id)).length;
   const selLotesCount=selLotes.size;
 
-  // Render a recurso/tratativa value for history (array or string)
-  function renderTratativaValue(v){
-    if(Array.isArray(v)) return v.length?v.join(", "):"—";
-    return v||"—";
-  }
-
   if(rows.length===0) return(
     <div>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}><div style={{fontSize:20,fontWeight:800,color:"#1C1C1E"}}>{stage.label}</div><DeptTag dept={stage.dept}/></div>
@@ -539,8 +555,16 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
     </div>
   );
 
-  const histTh = {...TH_DARK, width:170, maxWidth:170};
-  const histTd = (alt)=>({...TD(alt), width:170, maxWidth:170});
+  // Sticky checkbox column (left-fixed)
+  const stickyTh = {...TH_DARK, width:34, position:"sticky", left:0, zIndex:25};
+  const stickyTd = (bg)=>({...TD(false), background:bg, textAlign:"center", position:"sticky", left:0, zIndex:5});
+  const histTh = {...TH_DARK, minWidth:320};
+  const histTd = (alt)=>({...TD(alt), minWidth:320, padding:6});
+  const descTh = {...TH_DARK, minWidth:220};
+  const descTd = (bg)=>({...TD(false), background:bg, minWidth:220});
+
+  // total column count (for IPPN expand row colSpan)
+  const totalCols = (canInteract?1:0) /*checkbox*/ + 1 /*expand*/ + 3 /*Lote,Tubos,IPPNs*/ + 4 /*Pedido,Item,Material,Descricao*/ + 4 /*UltimaOrdem,QTS,Deposito,Motivo*/ + (stage.id>1?1:0) /*Historico*/ + 3 /*MotivoTexto,RazaoBloq,DescricaoMotivo*/ + 1 /*Definição*/;
 
   return(
     <div>
@@ -565,40 +589,29 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
         )}
       </div>
 
-      {/* Column-group outline toggles (lateral grouping) */}
-      <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-        <button onClick={()=>setShowG1(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,border:"1px solid "+(showG1?"#1A6FA8":"#E5E5EA"),background:showG1?"#E8F4FD":"#fff",color:showG1?"#1A6FA8":"#8E8E93",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>
-          <span style={{fontSize:13,fontWeight:800}}>{showG1?"−":"+"}</span> Pedido · Item · Material · Descrição
-        </button>
-        <button onClick={()=>setShowG2(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,border:"1px solid "+(showG2?"#B45309":"#E5E5EA"),background:showG2?"#FFF3E0":"#fff",color:showG2?"#B45309":"#8E8E93",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>
-          <span style={{fontSize:13,fontWeight:800}}>{showG2?"−":"+"}</span> Última Ordem · Qualidade QTS · Depósito SAP · Motivo de Bloqueio
-        </button>
-      </div>
-
       {/* Table */}
       <div style={{borderRadius:12,boxShadow:"0 1px 6px rgba(0,0,0,0.08)",background:"#fff",overflowX:"auto",overflowY:"auto",maxHeight:"calc(100vh - 320px)",minHeight:180}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1000}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1400}}>
           <thead>
             <tr>
-              {canInteract&&<th style={{...TH_DARK,width:34}}><input type="checkbox" style={{accentColor:"#5AC8FA",cursor:"pointer",width:15,height:15}} checked={selLotes.size===groups.length&&groups.length>0} onChange={e=>toggleAll(e.target.checked)}/></th>}
+              {canInteract&&<th style={stickyTh}><input type="checkbox" style={{accentColor:"#5AC8FA",cursor:"pointer",width:15,height:15}} checked={selLotes.size===groups.length&&groups.length>0} onChange={e=>toggleAll(e.target.checked)}/></th>}
               <th style={{...TH_DARK,width:30}} title="Expandir IPPNs">▶</th>
               <th style={TH_DARK}>Lote</th>
               <th style={TH_DARK}>Tubos</th>
               <th style={TH_DARK}>IPPNs</th>
-              {showG1&&<>
-                <th style={TH_DARK}>Pedido</th>
-                <th style={TH_DARK}>Item</th>
-                <th style={TH_DARK}>Material</th>
-                <th style={TH_DARK}>Descrição</th>
-              </>}
-              {showG2&&<>
-                <th style={TH_DARK}>Última Ordem</th>
-                <th style={TH_DARK}>Qualidade QTS</th>
-                <th style={TH_DARK}>Depósito SAP</th>
-                <th style={TH_DARK}>Motivo de Bloqueio</th>
-              </>}
-              <th style={TH_GREEN}>{isStage1?"Recursos Necessários":"Tratativa do Lote"}</th>
+              <th style={TH_DARK}>Pedido</th>
+              <th style={TH_DARK}>Item</th>
+              <th style={TH_DARK}>Material</th>
+              <th style={descTh}>Descrição</th>
+              <th style={TH_DARK}>Última Ordem</th>
+              <th style={TH_DARK}>Qualidade QTS</th>
+              <th style={TH_DARK}>Depósito SAP</th>
+              <th style={TH_DARK}>Motivo Bloqueio</th>
               {stage.id>1&&<th style={histTh}>Histórico</th>}
+              <th style={TH_DARK}>Motivo Bloqueio Texto</th>
+              <th style={TH_DARK}>Razão Bloq.</th>
+              <th style={TH_DARK}>Descrição Motivo</th>
+              <th style={TH_GREEN}>Definição</th>
             </tr>
           </thead>
           <tbody>
@@ -609,62 +622,43 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
               const ippnList=group.rows.map(r=>r.ippn).filter(Boolean).join(", ");
               const alt=gi%2===1;
               const bg=isSel?"rgba(0,122,255,0.06)":(alt?"#F8F9FB":"#fff");
-
-              const totalCols = (canInteract?1:0) + 1 + 1 + 1 + 1 + (showG1?4:0) + (showG2?4:0) + 1 + (stage.id>1?1:0);
-
               const currentTratValue = tratativas[group.lote] ?? group.tratativa;
 
               return[
                 <tr key={`g-${group.lote}`} style={{background:bg}}>
-                  {canInteract&&<td style={{...TD(false),background:bg,textAlign:"center"}}><input type="checkbox" style={{accentColor:"#007AFF",cursor:"pointer",width:15,height:15}} checked={isSel} onChange={()=>toggleSel(group.lote)}/></td>}
+                  {canInteract&&<td style={stickyTd(bg)}><input type="checkbox" style={{accentColor:"#007AFF",cursor:"pointer",width:15,height:15}} checked={isSel} onChange={()=>toggleSel(group.lote)}/></td>}
                   {/* Expand IPPNs */}
                   <td style={{...TD(false),background:bg,textAlign:"center"}}><button onClick={()=>toggleExp(group.lote)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#007AFF",fontWeight:700,padding:"1px 3px"}}>{isExp?"▼":"▶"}</button></td>
                   <td style={{...TD(false),background:bg,fontWeight:700,color:"#1C1C1E"}}>{group.lote||"—"}</td>
                   <td style={{...TD(false),background:bg}}><span style={{background:"#E8F4FD",color:"#1A6FA8",borderRadius:5,padding:"2px 7px",fontSize:11,fontWeight:700}}>{group.rows.length}</span></td>
                   <td style={{...TD(false),background:bg,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#555"}}>{ippnList||"—"}</td>
-                  {showG1&&<>
-                    <td style={{...TD(false),background:bg}}>{group.pedido||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.item||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.material||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{fr.descricao||"—"}</td>
-                  </>}
-                  {showG2&&<>
-                    <td style={{...TD(false),background:bg}}>{group.ultima_ordem||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.qualidade_qts||fr.qualidade_qts||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.deposito_sap||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.motivo_de_bloqueio||"—"}</td>
-                  </>}
+                  <td style={{...TD(false),background:bg}}>{group.pedido||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.item||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.material||"—"}</td>
+                  <td style={descTd(bg)}>{group.descricao||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.ultima_ordem||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.qualidade_qts||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.deposito_sap||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.motivo_bloqueio||"—"}</td>
+                  {stage.id>1&&<td style={histTd(alt)}><HistoryCards history={fr.history}/></td>}
+                  <td style={{...TD(false),background:bg}}>{group.motivo_bloqueio_texto||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.razao_bloq||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{group.descricao_motivo||"—"}</td>
                   <td style={{...TD(false),background:gi%2===0?"rgba(26,90,42,0.03)":"rgba(26,90,42,0.06)",minWidth:190}}>
                     {isStage1?(
                       <RecursosSelect value={currentTratValue} onChange={v=>setTratativas(t=>({...t,[group.lote]:v}))} readOnly={!canInteract}/>
                     ):(
-                      canInteract?(<input type="text" style={{border:"1.5px solid #E5E5EA",borderRadius:7,padding:"5px 9px",fontSize:11,width:"100%",outline:"none",background:"#fff",minWidth:160}} placeholder="Tratativa do lote…" value={currentTratValue||""} onChange={e=>setTratativas(t=>({...t,[group.lote]:e.target.value}))}/>):(<span style={{fontSize:11,color:"#555"}}>{currentTratValue||"—"}</span>)
+                      canInteract?(<input type="text" style={{border:"1.5px solid #E5E5EA",borderRadius:7,padding:"5px 9px",fontSize:11,width:"100%",outline:"none",background:"#fff",minWidth:160}} placeholder="Definição…" value={currentTratValue||""} onChange={e=>setTratativas(t=>({...t,[group.lote]:e.target.value}))}/>):(<span style={{fontSize:11,color:"#555"}}>{currentTratValue||"—"}</span>)
                     )}
                   </td>
-                  {stage.id>1&&<td style={histTd(false)}>
-                    {fr.history?.length>0?(
-                      <details>
-                        <summary style={{fontSize:10,color:"#007AFF",cursor:"pointer",fontWeight:600}}>{fr.history.length} etapa{fr.history.length!==1?"s":""}</summary>
-                        <div style={{marginTop:5,maxHeight:"4.6em",overflowY:"auto",paddingRight:2}}>
-                          {fr.history.map((h,hi)=>(
-                            <div key={hi} style={{fontSize:10,color:"#3A3A3C",marginBottom:5,borderLeft:"2px solid #E5E5EA",paddingLeft:7,lineHeight:1.5}}>
-                              <strong>{h.stageLabel}</strong><br/>{h.user}{h.tratativa&&(Array.isArray(h.tratativa)?h.tratativa.length>0:h.tratativa)?<><br/><em style={{color:"#555"}}>{renderTratativaValue(h.tratativa)}</em></>:null}<br/><span style={{color:"#C7C7CC"}}>{h.date}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    ):(<span style={{color:"#C7C7CC",fontSize:11}}>—</span>)}
-                  </td>}
                 </tr>,
-                // IPPN expanded info row (single full-width row, robust to dynamic column count)
+                // IPPN expanded info row
                 ...(isExp?group.rows.map((row,ri)=>(
                   <tr key={`exp-${row._id}`} style={{background:"#F0F7FF"}}>
                     <td colSpan={totalCols} style={{padding:"7px 14px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#555"}}>
                       <span style={{color:"#1A6FA8",fontWeight:700}}>IPPN {ri+1}:</span> {row.ippn||"—"}
                       &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600}}>Cassete:</span> {row.num_cassete||"—"}
                       &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600}}>Data Bloqueio:</span> {row.data_bloqueio||"—"}
-                      &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600}}>Razão:</span> {row.razao_bloq||"—"}
-                      &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600}}>Motivo Texto:</span> {row.motivo_bloqueio_texto||"—"}
                     </td>
                   </tr>
                 )):[]),
@@ -710,6 +704,7 @@ function Dashboard({stageData,historyRows,onSelectStage}){
   ];
 
   const hasTimingData=Object.keys(stageAvg).length>0||Object.keys(deptAvg).length>0;
+  const cardTitle = {fontSize:13,fontWeight:700,color:"#3A3A3C",marginBottom:10};
 
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:"18px 24px 40px"}}>
@@ -719,7 +714,7 @@ function Dashboard({stageData,historyRows,onSelectStage}){
       {/* KPIs */}
       <div style={{display:"flex",gap:12,marginBottom:24,flexWrap:"wrap"}}>
         {kpis.map(k=>(
-          <div key={k.label} style={{background:"#fff",borderRadius:16,padding:"16px 18px",flex:1,minWidth:130,boxShadow:"0 1px 6px rgba(0,0,0,0.08)",borderLeft:`4px solid ${k.color}`,cursor:k.sid?"pointer":"default"}} onClick={()=>k.sid&&onSelectStage(k.sid)}>
+          <div key={k.label} style={{background:"#fff",borderRadius:16,padding:"16px 18px",flex:1,minWidth:130,minHeight:78,boxShadow:"0 1px 6px rgba(0,0,0,0.08)",borderLeft:`4px solid ${k.color}`,cursor:k.sid?"pointer":"default",display:"flex",flexDirection:"column",justifyContent:"space-between"}} onClick={()=>k.sid&&onSelectStage(k.sid)}>
             <div style={{fontSize:10,color:"#8E8E93",fontWeight:600,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.5px"}}>{k.label}</div>
             <div style={{fontSize:34,fontWeight:900,color:k.color,letterSpacing:"-1.5px",lineHeight:1}}>{k.value}</div>
           </div>
@@ -729,7 +724,7 @@ function Dashboard({stageData,historyRows,onSelectStage}){
       {/* Tubos por etapa (left) + Pendências por Departamento (right) */}
       <div style={{display:"grid",gridTemplateColumns:"1.6fr 1fr",gap:14,marginBottom:24,alignItems:"start"}}>
         <div>
-          <div style={{fontSize:13,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Tubos por etapa</div>
+          <div style={cardTitle}>Tubos por etapa</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:8}}>
             {STAGES.map((stage,idx)=>{
               const count=stageData[stage.id]?.length||0;
@@ -747,7 +742,7 @@ function Dashboard({stageData,historyRows,onSelectStage}){
         </div>
 
         <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#3A3A3C",marginBottom:12}}>Pendências por Departamento</div>
+          <div style={cardTitle}>Pendências por Departamento</div>
           {!Object.keys(byDept).length?<div style={{fontSize:12,color:"#8E8E93"}}>Nenhum tubo em fluxo</div>:Object.entries(byDept).map(([dept,cnt])=>{
             const c=DEPT_COLORS[dept]||{bg:"#F2F2F7",fg:"#3A3A3C"};
             const pct=total>0?Math.round(cnt/total*100):0;
@@ -756,78 +751,78 @@ function Dashboard({stageData,historyRows,onSelectStage}){
         </div>
       </div>
 
-      {/* Timing section */}
-      <div style={{fontSize:13,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>⏱ Tempo médio por etapa</div>
-      {!hasTimingData?(
-        <div style={{background:"#fff",borderRadius:12,padding:"20px",boxShadow:"0 1px 4px rgba(0,0,0,0.07)",marginBottom:24,fontSize:13,color:"#8E8E93",textAlign:"center"}}>
-          Dados de tempo disponíveis após os primeiros tubos avançarem entre etapas
-        </div>
-      ):(
-        <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.08)",marginBottom:24}}>
-          {/* Per-stage bar chart */}
-          <div style={{marginBottom:16}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Por etapa</div>
-            {STAGES.filter(s=>stageAvg[s.id]).map((stage,idx)=>{
-              const ms=stageAvg[stage.id];
-              const color=STAGE_COLORS[idx];
-              const allMs=Object.values(stageAvg).filter(Boolean);
-              const maxMs=Math.max(...allMs,1);
-              const pct=Math.round(ms/maxMs*100);
-              return(
-                <div key={stage.id} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"#3A3A3C",display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{width:8,height:8,borderRadius:"50%",background:color,display:"inline-block",flexShrink:0}}></span>
-                      E{stage.id} · {stage.short}
+      {/* Tempo médio por etapa (left, 50%) + Bloqueio por Depósito (right, 50%) */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:20,alignItems:"start"}}>
+        <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+          <div style={cardTitle}>⏱ Tempo médio por etapa</div>
+          {!hasTimingData?(
+            <div style={{fontSize:13,color:"#8E8E93",textAlign:"center",padding:"12px 0"}}>
+              Dados de tempo disponíveis após os primeiros tubos avançarem entre etapas
+            </div>
+          ):(
+            <div>
+              {/* Per-stage bar chart */}
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Por etapa</div>
+                {STAGES.filter(s=>stageAvg[s.id]).map((stage,idx)=>{
+                  const ms=stageAvg[stage.id];
+                  const color=STAGE_COLORS[idx];
+                  const allMs=Object.values(stageAvg).filter(Boolean);
+                  const maxMs=Math.max(...allMs,1);
+                  const pct=Math.round(ms/maxMs*100);
+                  return(
+                    <div key={stage.id} style={{marginBottom:10}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <div style={{fontSize:11,fontWeight:600,color:"#3A3A3C",display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{width:8,height:8,borderRadius:"50%",background:color,display:"inline-block",flexShrink:0}}></span>
+                          E{stage.id} · {stage.short}
+                        </div>
+                        <span style={{fontSize:12,fontWeight:800,color}}>{formatDuration(ms)}</span>
+                      </div>
+                      <div style={{height:7,background:"#F2F2F7",borderRadius:4,overflow:"hidden"}}>
+                        <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:4,transition:"width 0.6s"}}/>
+                      </div>
                     </div>
-                    <span style={{fontSize:12,fontWeight:800,color}}>{formatDuration(ms)}</span>
-                  </div>
-                  <div style={{height:7,background:"#F2F2F7",borderRadius:4,overflow:"hidden"}}>
-                    <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:4,transition:"width 0.6s"}}/>
-                  </div>
+                  );
+                })}
+              </div>
+              {/* Per-dept */}
+              {Object.keys(deptAvg).length>0&&(
+                <div style={{borderTop:"1px solid #F2F2F7",paddingTop:14}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Por departamento</div>
+                  {Object.entries(deptAvg).map(([dept,ms])=>{
+                    const c=DEPT_COLORS[dept]||{bg:"#F2F2F7",fg:"#3A3A3C"};
+                    const allMs=Object.values(deptAvg).filter(Boolean);
+                    const maxMs=Math.max(...allMs,1);
+                    const pct=Math.round(ms/maxMs*100);
+                    return(
+                      <div key={dept} style={{marginBottom:10}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                          <span style={{fontSize:11,fontWeight:600,color:"#3A3A3C"}}>{DEPT_FULL[dept]||dept}</span>
+                          <span style={{fontSize:12,fontWeight:800,color:c.fg}}>{formatDuration(ms)}</span>
+                        </div>
+                        <div style={{height:7,background:"#F2F2F7",borderRadius:4,overflow:"hidden"}}>
+                          <div style={{width:`${pct}%`,height:"100%",background:c.fg,borderRadius:4,transition:"width 0.6s"}}/>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-          {/* Per-dept */}
-          {Object.keys(deptAvg).length>0&&(
-            <div style={{borderTop:"1px solid #F2F2F7",paddingTop:14}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Por departamento</div>
-              {Object.entries(deptAvg).map(([dept,ms])=>{
-                const c=DEPT_COLORS[dept]||{bg:"#F2F2F7",fg:"#3A3A3C"};
-                const allMs=Object.values(deptAvg).filter(Boolean);
-                const maxMs=Math.max(...allMs,1);
-                const pct=Math.round(ms/maxMs*100);
-                return(
-                  <div key={dept} style={{marginBottom:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                      <span style={{fontSize:11,fontWeight:600,color:"#3A3A3C"}}>{DEPT_FULL[dept]||dept}</span>
-                      <span style={{fontSize:12,fontWeight:800,color:c.fg}}>{formatDuration(ms)}</span>
-                    </div>
-                    <div style={{height:7,background:"#F2F2F7",borderRadius:4,overflow:"hidden"}}>
-                      <div style={{width:`${pct}%`,height:"100%",background:c.fg,borderRadius:4,transition:"width 0.6s"}}/>
-                    </div>
-                  </div>
-                );
-              })}
+              )}
             </div>
           )}
         </div>
-      )}
 
-      {/* Bloqueio por Depósito */}
-      <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.08)",marginBottom:20}}>
-        <div style={{fontSize:13,fontWeight:700,color:"#3A3A3C",marginBottom:12}}>Bloqueio por Depósito</div>
-        {!Object.keys(byDep).length?<div style={{fontSize:12,color:"#8E8E93"}}>Nenhum tubo</div>:(
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:"4px 24px"}}>
-            {Object.entries(byDep).sort((a,b)=>b[1]-a[1]).map(([dep,cnt],i)=>{
-              const clrs=["#007AFF","#34C759","#FF9500","#AF52DE","#FF2D55","#5AC8FA"];
-              const col=clrs[i%clrs.length];
-              const pct=total>0?Math.round(cnt/total*100):0;
-              return(<div key={dep} style={{marginBottom:11}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:11,fontWeight:600,color:"#3A3A3C"}}>{dep}</span><span style={{fontSize:12,fontWeight:800,color:col}}>{cnt}</span></div><div style={{height:6,background:"#F2F2F7",borderRadius:3,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:3,transition:"width 0.5s"}}/></div></div>);
-            })}
-          </div>
-        )}
+        {/* Bloqueio por Depósito */}
+        <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+          <div style={cardTitle}>Bloqueio por Depósito</div>
+          {!Object.keys(byDep).length?<div style={{fontSize:12,color:"#8E8E93"}}>Nenhum tubo</div>:Object.entries(byDep).sort((a,b)=>b[1]-a[1]).map(([dep,cnt],i)=>{
+            const clrs=["#007AFF","#34C759","#FF9500","#AF52DE","#FF2D55","#5AC8FA"];
+            const col=clrs[i%clrs.length];
+            const pct=total>0?Math.round(cnt/total*100):0;
+            return(<div key={dep} style={{marginBottom:11}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:11,fontWeight:600,color:"#3A3A3C"}}>{dep}</span><span style={{fontSize:12,fontWeight:800,color:col}}>{cnt}</span></div><div style={{height:6,background:"#F2F2F7",borderRadius:3,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:3,transition:"width 0.5s"}}/></div></div>);
+          })}
+        </div>
       </div>
 
       {total===0&&concluded===0&&(
@@ -846,8 +841,6 @@ function Dashboard({stageData,historyRows,onSelectStage}){
 // ─────────────────────────────────────────────────────────────────────────────
 function HistoricoPage({historyRows}){
   const [filters,setFilters]=useState({pedido:"",item:"",material:"",lotes:"",ippns:""});
-  const [expanded,setExpanded]=useState(new Set());
-  function toggleExp(lote){const n=new Set(expanded);n.has(lote)?n.delete(lote):n.add(lote);setExpanded(n);}
 
   function rowMatches(row){
     const f=(tokens,fields)=>!tokens.length||tokens.some(t=>fields.some(f=>String(row[f]||"").toLowerCase().includes(t)));
@@ -866,13 +859,8 @@ function HistoricoPage({historyRows}){
     {key:"ippns",label:"IPPNs",ph:"ex: IPN001"},
   ];
 
-  const histTh = {...TH_DARK, width:170, maxWidth:170};
-  const histTd = (alt)=>({...TD(alt), width:170, maxWidth:170});
-
-  function renderTratativaValue(v){
-    if(Array.isArray(v)) return v.length?v.join(", "):"—";
-    return v||"—";
-  }
+  const histTh = {...TH_DARK, minWidth:320};
+  const histTd = (alt)=>({...TD(alt), minWidth:320, padding:6});
 
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:"18px 24px 40px"}}>
@@ -898,23 +886,22 @@ function HistoricoPage({historyRows}){
         <div>
           <div style={{fontSize:12,color:"#8E8E93",marginBottom:10}}>{groups.length} lote{groups.length!==1?"s":""} · {filtered.length} tubo{filtered.length!==1?"s":""}{hasFilters&&` (filtrado de ${historyRows.length})`}</div>
           <div style={{borderRadius:12,boxShadow:"0 1px 6px rgba(0,0,0,0.08)",background:"#fff",overflowX:"auto",overflowY:"auto",maxHeight:"calc(100vh - 340px)"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:800}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:900}}>
               <thead>
                 <tr>
                   <th style={{...TH_DARK,width:30}}></th>
-                  {["Lote","Tubos","IPPNs","Pedido","Item","Material","Depósito","Motivo de Bloqueio","Data Bloqueio"].map(h=><th key={h} style={TH_DARK}>{h}</th>)}
+                  {["Lote","Tubos","IPPNs","Pedido","Item","Material","Depósito","Motivo Bloqueio","Data Bloqueio"].map(h=><th key={h} style={TH_DARK}>{h}</th>)}
                   <th style={histTh}>Histórico</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.map((group,gi)=>{
-                  const isExp=expanded.has(group.lote);
                   const fr=group.rows[0];
                   const ippnList=group.rows.map(r=>r.ippn).filter(Boolean).join(", ");
                   const alt=gi%2===1;
-                  return[
+                  return(
                     <tr key={`h-${group.lote}`} style={{background:alt?"#F8F9FB":"#fff"}}>
-                      <td style={{...TD(alt),textAlign:"center"}}><button onClick={()=>toggleExp(group.lote)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"#007AFF",fontWeight:700}}>{isExp?"▼":"▶"}</button></td>
+                      <td style={{...TD(alt),textAlign:"center"}}></td>
                       <td style={{...TD(alt),fontWeight:700,color:"#1C1C1E"}}>{group.lote||"—"}</td>
                       <td style={TD(alt)}><span style={{background:"#EDF7EE",color:"#1A7A3A",borderRadius:5,padding:"2px 7px",fontSize:11,fontWeight:700}}>{group.rows.length}</span></td>
                       <td style={{...TD(alt),maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ippnList||"—"}</td>
@@ -922,34 +909,11 @@ function HistoricoPage({historyRows}){
                       <td style={TD(alt)}>{group.item||"—"}</td>
                       <td style={TD(alt)}>{group.material||"—"}</td>
                       <td style={TD(alt)}>{group.deposito_sap||"—"}</td>
-                      <td style={TD(alt)}>{group.motivo_de_bloqueio||"—"}</td>
+                      <td style={TD(alt)}>{group.motivo_bloqueio||"—"}</td>
                       <td style={TD(alt)}>{fr.data_bloqueio||"—"}</td>
-                      <td style={histTd(alt)}>
-                        {fr.history?.length>0?(
-                          <details>
-                            <summary style={{fontSize:10,color:"#34C759",cursor:"pointer",fontWeight:700}}>✓ {fr.history.length} etapa{fr.history.length!==1?"s":""}</summary>
-                            <div style={{marginTop:5,maxHeight:"4.6em",overflowY:"auto",paddingRight:2}}>
-                              {fr.history.map((h,hi)=>(
-                                <div key={hi} style={{fontSize:10,color:"#3A3A3C",marginBottom:5,borderLeft:"2px solid #34C759",paddingLeft:7,lineHeight:1.5}}>
-                                  <strong>{h.stageLabel}</strong><br/>{h.user}{h.tratativa&&(Array.isArray(h.tratativa)?h.tratativa.length>0:h.tratativa)?<><br/><em>{renderTratativaValue(h.tratativa)}</em></>:null}<br/><span style={{color:"#C7C7CC"}}>{h.date}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        ):<span style={{color:"#C7C7CC",fontSize:11}}>—</span>}
-                      </td>
-                    </tr>,
-                    ...(isExp?group.rows.map((row,ri)=>(
-                      <tr key={`he-${row._id}`} style={{background:"#F0F7FF"}}>
-                        <td colSpan={11} style={{padding:"6px 14px",borderBottom:"1px solid #E8F4FD",fontSize:11,color:"#1A6FA8",fontWeight:600}}>
-                          IPPN {ri+1}: {row.ippn||"—"}
-                          &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600,color:"#555"}}>Pedido:</span> <span style={{color:"#555",fontWeight:400}}>{row.pedido||"—"}</span>
-                          &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600,color:"#555"}}>Item:</span> <span style={{color:"#555",fontWeight:400}}>{row.item||"—"}</span>
-                          &nbsp;&nbsp;|&nbsp;&nbsp;<span style={{fontWeight:600,color:"#555"}}>Material:</span> <span style={{color:"#555",fontWeight:400}}>{row.material||"—"}</span>
-                        </td>
-                      </tr>
-                    )):[]),
-                  ];
+                      <td style={histTd(alt)}><HistoryCards history={fr.history}/></td>
+                    </tr>
+                  );
                 })}
               </tbody>
             </table>
