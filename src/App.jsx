@@ -52,11 +52,11 @@ const DEFAULT_USERS = [
 ];
 
 // All importable columns
-const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_bloqueio","motivo_bloqueio_texto","razao_bloq","num_cassete"];
+const ALL_COLS = ["pedido","item","material","descricao","data_bloqueio","ultima_ordem","lote","ippn","qualidade_qts","deposito_sap","motivo_de_bloqueio","motivo_bloqueio_texto","razao_bloq","num_cassete"];
 const COL_LABELS = {
   pedido:"Pedido", item:"Item", material:"Material", descricao:"Descrição", data_bloqueio:"Data Bloqueio",
   ultima_ordem:"Última Ordem", lote:"Lote", ippn:"IPPN", qualidade_qts:"Qualidade QTS",
-  deposito_sap:"Depósito SAP", motivo_bloqueio:"Motivo Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
+  deposito_sap:"Depósito SAP", motivo_de_bloqueio:"Motivo de Bloqueio", motivo_bloqueio_texto:"Motivo Bloqueio Texto",
   razao_bloq:"Razão Bloq.", num_cassete:"Nº Cassete",
 };
 
@@ -144,7 +144,7 @@ function groupByLote(rows) {
       pedido:row.pedido||"",item:row.item||"",material:row.material||"",
       descricao:row.descricao||"",data_bloqueio:row.data_bloqueio||"",
       ultima_ordem:row.ultima_ordem||"",qualidade_qts:row.qualidade_qts||"",
-      deposito_sap:row.deposito_sap||"",motivo_bloqueio:row.motivo_bloqueio||"",
+      deposito_sap:row.deposito_sap||"",motivo_de_bloqueio:row.motivo_de_bloqueio||"",
     });
     map.get(key).rows.push(row);
   });
@@ -437,7 +437,7 @@ function ImportStep({onImport}){
   }
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0]);},[]);
 
-  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_bloqueio","data_bloqueio"];
+  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_de_bloqueio","data_bloqueio"];
   return(
     <div>
       <div style={{fontSize:22,fontWeight:800,color:"#1C1C1E",letterSpacing:"-0.4px",marginBottom:4}}>Importar Tubos Bloqueados</div>
@@ -571,7 +571,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
           <span style={{fontSize:13,fontWeight:800}}>{showG1?"−":"+"}</span> Pedido · Item · Material · Descrição
         </button>
         <button onClick={()=>setShowG2(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,border:"1px solid "+(showG2?"#B45309":"#E5E5EA"),background:showG2?"#FFF3E0":"#fff",color:showG2?"#B45309":"#8E8E93",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:600,cursor:"pointer"}}>
-          <span style={{fontSize:13,fontWeight:800}}>{showG2?"−":"+"}</span> Última Ordem · Qualidade QTS · Depósito SAP · Motivo Bloqueio
+          <span style={{fontSize:13,fontWeight:800}}>{showG2?"−":"+"}</span> Última Ordem · Qualidade QTS · Depósito SAP · Motivo de Bloqueio
         </button>
       </div>
 
@@ -595,7 +595,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
                 <th style={TH_DARK}>Última Ordem</th>
                 <th style={TH_DARK}>Qualidade QTS</th>
                 <th style={TH_DARK}>Depósito SAP</th>
-                <th style={TH_DARK}>Motivo Bloqueio</th>
+                <th style={TH_DARK}>Motivo de Bloqueio</th>
               </>}
               <th style={TH_GREEN}>{isStage1?"Recursos Necessários":"Tratativa do Lote"}</th>
               {stage.id>1&&<th style={histTh}>Histórico</th>}
@@ -632,7 +632,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
                     <td style={{...TD(false),background:bg}}>{group.ultima_ordem||"—"}</td>
                     <td style={{...TD(false),background:bg}}>{group.qualidade_qts||fr.qualidade_qts||"—"}</td>
                     <td style={{...TD(false),background:bg}}>{group.deposito_sap||"—"}</td>
-                    <td style={{...TD(false),background:bg}}>{group.motivo_bloqueio||"—"}</td>
+                    <td style={{...TD(false),background:bg}}>{group.motivo_de_bloqueio||"—"}</td>
                   </>}
                   <td style={{...TD(false),background:gi%2===0?"rgba(26,90,42,0.03)":"rgba(26,90,42,0.06)",minWidth:190}}>
                     {isStage1?(
@@ -902,7 +902,7 @@ function HistoricoPage({historyRows}){
               <thead>
                 <tr>
                   <th style={{...TH_DARK,width:30}}></th>
-                  {["Lote","Tubos","IPPNs","Pedido","Item","Material","Depósito","Motivo Bloqueio","Data Bloqueio"].map(h=><th key={h} style={TH_DARK}>{h}</th>)}
+                  {["Lote","Tubos","IPPNs","Pedido","Item","Material","Depósito","Motivo de Bloqueio","Data Bloqueio"].map(h=><th key={h} style={TH_DARK}>{h}</th>)}
                   <th style={histTh}>Histórico</th>
                 </tr>
               </thead>
@@ -922,7 +922,7 @@ function HistoricoPage({historyRows}){
                       <td style={TD(alt)}>{group.item||"—"}</td>
                       <td style={TD(alt)}>{group.material||"—"}</td>
                       <td style={TD(alt)}>{group.deposito_sap||"—"}</td>
-                      <td style={TD(alt)}>{group.motivo_bloqueio||"—"}</td>
+                      <td style={TD(alt)}>{group.motivo_de_bloqueio||"—"}</td>
                       <td style={TD(alt)}>{fr.data_bloqueio||"—"}</td>
                       <td style={histTd(alt)}>
                         {fr.history?.length>0?(
