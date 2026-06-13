@@ -6,7 +6,7 @@ import {
   ChevronRight, ChevronDown, ArrowRight, ArrowLeft, CheckCircle2,
   Upload, LogOut, Plus, Pencil, Trash2, Shield, Users, Inbox,
   Clock, AlertTriangle, RotateCcw, FlaskConical, Loader2, Layers,
-  BarChart3, Package, Building2,
+  BarChart3, Package, Building2, Receipt, PieChart, X,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ function GlobalStyles(){
 function Toast({msg}){ if(!msg)return null; return(<div style={{position:"fixed",bottom:28,left:`calc(50% + ${SIDEBAR_W/2}px)`,transform:"translateX(-50%)",background:"rgba(28,28,30,0.92)",backdropFilter:"blur(12px)",color:"#fff",borderRadius:14,padding:"12px 22px",fontSize:14,fontWeight:500,zIndex:500,boxShadow:"0 10px 30px rgba(0,0,0,0.25)",display:"flex",alignItems:"center",gap:8,whiteSpace:"nowrap",pointerEvents:"none",fontFamily:FONT}}><CheckCircle2 size={16} color="#34C759"/>{msg}</div>); }
 
 function Modal({title,body,onConfirm,onCancel,confirmLabel="Confirmar",danger=false,children}){
-  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(2px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onCancel}><div style={{background:SURFACE,borderRadius:18,padding:"28px 28px 24px",maxWidth:480,width:"100%",boxShadow:"0 28px 70px rgba(0,0,0,0.25)",fontFamily:FONT}} onClick={e=>e.stopPropagation()}><div style={{fontSize:18,fontWeight:800,color:"#1C1C1E",marginBottom:8}}>{title}</div>{body&&<div style={{fontSize:14,color:"#3A3A3C",marginBottom:children?12:22,lineHeight:1.65}}>{body}</div>}{children&&<div style={{marginBottom:20}}>{children}</div>}<div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><button className="spring-btn" style={{background:"#F2F2F7",color:ACCENT,border:"none",borderRadius:12,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer"}} onClick={onCancel}>Cancelar</button><button className="spring-btn" style={{background:danger?"linear-gradient(135deg,#FF453A,#C0392B)":`linear-gradient(135deg,${ACCENT},#0051D4)`,color:"#fff",border:"none",borderRadius:12,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer"}} onClick={onConfirm}>{confirmLabel}</button></div></div></div>);
+  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(2px)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onCancel}><div style={{background:SURFACE,borderRadius:18,padding:"28px 28px 24px",maxWidth:480,width:"100%",boxShadow:"0 28px 70px rgba(0,0,0,0.25)",fontFamily:FONT}} onClick={e=>e.stopPropagation()}><div style={{fontSize:19,fontWeight:800,color:"#1C1C1E",marginBottom:8,fontFamily:TITLE_FONT,letterSpacing:"-0.3px"}}>{title}</div>{body&&<div style={{fontSize:14,color:"#3A3A3C",marginBottom:children?12:22,lineHeight:1.65}}>{body}</div>}{children&&<div style={{marginBottom:20}}>{children}</div>}<div style={{display:"flex",gap:10,justifyContent:"flex-end"}}><button className="spring-btn" style={{background:"#F2F2F7",color:ACCENT,border:"none",borderRadius:12,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer"}} onClick={onCancel}>Cancelar</button><button className="spring-btn" style={{background:danger?"linear-gradient(135deg,#FF453A,#C0392B)":`linear-gradient(135deg,${ACCENT},#0051D4)`,color:"#fff",border:"none",borderRadius:12,padding:"11px 22px",fontSize:14,fontWeight:600,cursor:"pointer"}} onClick={onConfirm}>{confirmLabel}</button></div></div></div>);
 }
 
 function DeptTag({dept}){
@@ -600,10 +600,16 @@ function ImportStep({onImport}){
   }
   const handleDrop=useCallback(e=>{e.preventDefault();setDrag(false);processFile(e.dataTransfer.files[0]);},[]);
 
-  const previewCols=["pedido","item","material","lote","ippn","deposito_sap","motivo_bloqueio","data_bloqueio"];
+  const previewCols=["pedido_item","material","lote","ippn","deposito_sap","motivo_bloqueio","data_bloqueio"];
+  function previewCell(row,col){
+    if(col==="pedido_item") return (row.pedido||row.item)?`${row.pedido||"—"}/${row.item||"—"}`:"—";
+    return row[col]||"—";
+  }
+  function previewLabel(col){
+    return col==="pedido_item" ? "Pedido/Item" : (COL_LABELS[col]||col);
+  }
   return(
     <div>
-      <div style={{fontSize:21,fontWeight:800,color:"#1C1C1E",letterSpacing:"-0.4px",marginBottom:4,fontFamily:TITLE_FONT}}>Importar Tubos Bloqueados</div>
       <div style={{fontSize:13,color:"#8E8E93",marginBottom:20}}>Carregue um arquivo CSV, TXT ou XLS/XLSX para iniciar o fluxo na Etapa 1.</div>
       <div style={{border:`2px dashed ${drag?ACCENT:"#D1D1D6"}`,borderRadius:18,padding:"44px 24px",textAlign:"center",background:drag?"rgba(10,132,255,0.04)":"#FAFAFB",cursor:"pointer",transition:`all 0.25s ${EASE}`,marginBottom:18}} onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={handleDrop} onClick={()=>!loading&&document.getElementById("fileInputImp").click()}>
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
@@ -619,8 +625,8 @@ function ImportStep({onImport}){
           <div style={{fontSize:13,color:"#34C759",fontWeight:700,marginBottom:10,display:"flex",alignItems:"center",gap:6}}><CheckCircle2 size={15}/> {preview.length} tubos encontrados</div>
           <div style={{overflowX:"auto",borderRadius:14,boxShadow:"0 1px 5px rgba(0,0,0,0.06)",background:"#fff",maxHeight:260,overflowY:"auto",marginBottom:14}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:600}}>
-              <thead><tr>{previewCols.map(c=><th key={c} style={TH}>{COL_LABELS[c]||c}</th>)}</tr></thead>
-              <tbody>{preview.slice(0,10).map((row,i)=><tr key={i}>{previewCols.map(c=><td key={c} style={TD(i%2===1)}>{row[c]||"—"}</td>)}</tr>)}</tbody>
+              <thead><tr>{previewCols.map(c=><th key={c} style={TH}>{previewLabel(c)}</th>)}</tr></thead>
+              <tbody>{preview.slice(0,10).map((row,i)=><tr key={i}>{previewCols.map(c=><td key={c} style={TD(i%2===1)}>{previewCell(row,c)}</td>)}</tr>)}</tbody>
             </table>
           </div>
           {preview.length>10&&<div style={{fontSize:11,color:"#8E8E93",marginBottom:10}}>Exibindo 10 de {preview.length} linhas</div>}
@@ -633,7 +639,7 @@ function ImportStep({onImport}){
         <div style={{background:"#fff",borderRadius:14,padding:"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
           <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:6}}>Colunas esperadas (mapeamento automático por nome):</div>
           <div style={{fontSize:11,color:"#8E8E93",lineHeight:2}}>{Object.values(COL_LABELS).join(" · ")}</div>
-          <div style={{fontSize:11,color:"#8E8E93",marginTop:6}}>A coluna <strong>Data Bloqueio</strong> é automaticamente ajustada para o formato DD/MM/AAAA.</div>
+          <div style={{fontSize:11,color:"#8E8E93",marginTop:6}}>A coluna <strong>Data Bloqueio</strong> é automaticamente ajustada para o formato DD/MM/AAAA. As colunas <strong>Pedido</strong> e <strong>Item</strong> são exibidas em conjunto como <strong>Pedido/Item</strong>.</div>
         </div>
       )}
     </div>
@@ -643,7 +649,7 @@ function ImportStep({onImport}){
 // ─────────────────────────────────────────────────────────────────────────────
 // STAGE VIEW
 // ─────────────────────────────────────────────────────────────────────────────
-function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
+function StageView({stage,rows,user,onAdvance,onReturn,onComplete,filters,faturamento}){
   const [selLotes,setSelLotes]=useState(new Set());
   const [tratativas,setTratativas]=useState({});
   const [expanded,setExpanded]=useState(new Set());
@@ -655,7 +661,15 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
   const isStage1 = stage.id===1;
   const nextStage = STAGES.find(s=>s.id===stage.id+1);
   const prevStage = STAGES.find(s=>s.id===stage.id-1);
-  const groups = groupByLote(rows);
+
+  const hasSearch = filters && Object.values(filters).some(Boolean);
+  const allGroups = groupByLote(rows);
+  // Search also filters the table itself (not just the pipeline badge counts)
+  const groups = hasSearch ? allGroups.filter(g=>g.rows.some(r=>rowMatchesSearch(r,filters))) : allGroups;
+
+  // Pedido/Item combos registered in Faturamento — highlighted in the table
+  const fatSet = new Set((faturamento||[]).map(f=>`${(f.pedido||"").trim()}|${(f.item||"").trim()}`.toLowerCase()));
+  const isFaturado = (g)=>fatSet.has(`${(g.pedido||"").trim()}|${(g.item||"").trim()}`.toLowerCase());
 
   const canInteract = user.dept==="Admin" || (user.allowedStages||[]).includes(stage.id);
 
@@ -690,7 +704,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
 
   if(rows.length===0) return(
     <div>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}><div style={{fontSize:18,fontWeight:800,color:"#1C1C1E"}}>{stage.label}</div><DeptTag dept={stage.dept}/></div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}><DeptTag dept={stage.dept}/></div>
       <div style={{textAlign:"center",padding:"60px 24px",background:"#fff",borderRadius:18,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><Inbox size={40} color="#C7C7CC" strokeWidth={1.5}/></div>
         <div style={{fontSize:15,fontWeight:700,color:"#3A3A3C",marginBottom:4}}>Nenhum tubo nesta etapa</div>
@@ -708,20 +722,23 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
   const descTd = (bg)=>({...TD(false), background:bg, minWidth:220});
 
   // total column count (for IPPN expand row colSpan)
-  const totalCols = (canInteract?1:0) /*checkbox*/ + 1 /*expand*/ + 3 /*Lote,Tubos,IPPNs*/ + 2 /*DataBloqueio,Cassete*/ + 4 /*Pedido,Item,Material,Descricao*/ + 4 /*UltimaOrdem,QTS,Deposito,Motivo*/ + 3 /*MotivoTexto,RazaoBloq,DescricaoMotivo*/ + 1 /*Definição*/ + (stage.id>1?1:0) /*Historico*/;
+  const totalCols = (canInteract?1:0) /*checkbox*/ + 1 /*expand*/ + 3 /*Lote,Tubos,IPPNs*/ + 2 /*DataBloqueio,Cassete*/ + 3 /*Pedido/Item,Material,Descricao*/ + 4 /*UltimaOrdem,QTS,Deposito,Motivo*/ + 3 /*MotivoTexto,RazaoBloq,DescricaoMotivo*/ + 1 /*Definição*/ + (stage.id>1?1:0) /*Historico*/;
 
   return(
     <div>
       {/* Top bar */}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:10}}>
-        <div>
-          <div style={{fontSize:21,fontWeight:800,color:"#1C1C1E",letterSpacing:"-0.4px",marginBottom:6,fontFamily:TITLE_FONT}}>{stage.label}</div>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-            <DeptTag dept={stage.dept}/>
-            <span style={{fontSize:12,color:"#8E8E93"}}>{groups.length} lote{groups.length!==1?"s":""} · {rows.length} tubo{rows.length!==1?"s":""}</span>
-            {selLotes.size>0&&<span style={{fontSize:12,fontWeight:700,color:ACCENT,background:"rgba(10,132,255,0.08)",borderRadius:8,padding:"3px 10px"}}>{selLotesCount} lote{selLotesCount!==1?"s":""} ({selCount} tubo{selCount!==1?"s":""})</span>}
-            {!canInteract&&<span style={{fontSize:11,color:"#FF453A",background:"#FFF2F0",borderRadius:6,padding:"2px 8px",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><AlertTriangle size={11}/> Sem permissão nesta etapa</span>}
-          </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <DeptTag dept={stage.dept}/>
+          <span style={{fontSize:12,color:"#8E8E93"}}>{groups.length} lote{groups.length!==1?"s":""} · {rows.length} tubo{rows.length!==1?"s":""}</span>
+          {selLotes.size>0&&<span style={{fontSize:12,fontWeight:700,color:ACCENT,background:"rgba(10,132,255,0.08)",borderRadius:8,padding:"3px 10px"}}>{selLotesCount} lote{selLotesCount!==1?"s":""} ({selCount} tubo{selCount!==1?"s":""})</span>}
+          {!canInteract&&<span style={{fontSize:11,color:"#FF453A",background:"#FFF2F0",borderRadius:6,padding:"2px 8px",fontWeight:600,display:"flex",alignItems:"center",gap:4}}><AlertTriangle size={11}/> Sem permissão nesta etapa</span>}
+          {faturamento&&faturamento.length>0&&(
+            <span style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(255,69,58,0.10)",borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:600,color:"#1C1C1E"}}>
+              <span style={{width:9,height:9,borderRadius:3,background:"rgba(255,69,58,0.35)",display:"inline-block"}}/>
+              Faturamento
+            </span>
+          )}
         </div>
         {/* Action buttons */}
         {canInteract&&(
@@ -735,7 +752,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
 
       {/* Table */}
       <div style={{borderRadius:14,boxShadow:"0 1px 6px rgba(0,0,0,0.05)",background:"#fff",overflowX:"auto",overflowY:"auto",maxHeight:"calc(100vh - 280px)",minHeight:180}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1400}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:1320}}>
           <thead>
             <tr>
               {canInteract&&<th style={stickyTh}><input type="checkbox" style={{accentColor:ACCENT,cursor:"pointer",width:15,height:15}} checked={selLotes.size===groups.length&&groups.length>0} onChange={e=>toggleAll(e.target.checked)}/></th>}
@@ -745,8 +762,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
               <th style={TH}>IPPNs</th>
               <th style={TH}>Data Bloqueio</th>
               <th style={TH}>Nº Cassete</th>
-              <th style={TH}>Pedido</th>
-              <th style={TH}>Item</th>
+              <th style={TH}>Pedido/Item</th>
               <th style={TH}>Material</th>
               <th style={descTh}>Descrição</th>
               <th style={TH}>Última Ordem</th>
@@ -767,7 +783,9 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
               const fr=group.rows[0];
               const ippnList=group.rows.map(r=>r.ippn).filter(Boolean).join(", ");
               const alt=gi%2===1;
-              const bg=isSel?"rgba(10,132,255,0.06)":(alt?"#FAFAFB":"#fff");
+              const fat=isFaturado(group);
+              const bg=isSel?"rgba(10,132,255,0.06)":(fat?"rgba(255,69,58,0.07)":(alt?"#FAFAFB":"#fff"));
+              const pedidoItem = (group.pedido||group.item) ? `${group.pedido||"—"}/${group.item||"—"}` : "—";
               const currentTratValue = tratativas[group.lote] ?? group.tratativa;
 
               return[
@@ -780,8 +798,7 @@ function StageView({stage,rows,user,onAdvance,onReturn,onComplete}){
                   <td style={{...TD(false),background:bg,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#555"}}>{ippnList||"—"}</td>
                   <td style={{...TD(false),background:bg}}>{group.data_bloqueio||"—"}</td>
                   <td style={{...TD(false),background:bg}}>{group.num_cassete||"—"}</td>
-                  <td style={{...TD(false),background:bg}}>{group.pedido||"—"}</td>
-                  <td style={{...TD(false),background:bg}}>{group.item||"—"}</td>
+                  <td style={{...TD(false),background:bg}}>{pedidoItem}</td>
                   <td style={{...TD(false),background:bg}}>{group.material||"—"}</td>
                   <td style={descTd(bg)}>{group.descricao||"—"}</td>
                   <td style={{...TD(false),background:bg}}>{group.ultima_ordem||"—"}</td>
@@ -838,6 +855,9 @@ function SectionHeader({icon:Icon, title, color=ACCENT}){
 // DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
 function Dashboard({stageData,historyRows,onSelectStage}){
+  const [selectedStage,setSelectedStage]=useState(null);
+  function toggleStageFilter(id){setSelectedStage(s=>s===id?null:id);}
+
   const allActive=Object.values(stageData).flat();
   const total=allActive.length;
   const etapa1=stageData[1]?.length||0;
@@ -845,11 +865,28 @@ function Dashboard({stageData,historyRows,onSelectStage}){
   const pendExec=stageData[8]?.length||0;
   const concluded=historyRows.length;
 
+  // Rows used by the cross-filterable charts (Bloqueio por Depósito + Motivos de Bloqueio)
+  const filteredRows = selectedStage ? (stageData[selectedStage]||[]) : allActive;
+  const filteredStageInfo = selectedStage!=null ? STAGES.find(s=>s.id===selectedStage) : null;
+
   const byDep={};
-  allActive.forEach(r=>{const d=r.deposito_sap||"Sem Depósito";byDep[d]=(byDep[d]||0)+1;});
+  filteredRows.forEach(r=>{const d=r.deposito_sap||"Sem Depósito";byDep[d]=(byDep[d]||0)+1;});
 
   const byDept={};
   STAGES.filter(s=>s.id!==8&&s.dept).forEach(s=>{const cnt=stageData[s.id]?.length||0;if(!byDept[s.dept])byDept[s.dept]=0;byDept[s.dept]+=cnt;});
+
+  // ─ Pareto: principais Motivos de Bloqueio (até 80% acumulado) ─
+  const motivoCounts={};
+  filteredRows.forEach(r=>{const m=(r.motivo_bloqueio_texto||"").trim();if(m)motivoCounts[m]=(motivoCounts[m]||0)+1;});
+  const motivoTotal=Object.values(motivoCounts).reduce((a,b)=>a+b,0);
+  const motivoSorted=Object.entries(motivoCounts).sort((a,b)=>b[1]-a[1]);
+  const paretoItems=[];
+  let cum=0;
+  for(const [label,cnt] of motivoSorted){
+    cum+=cnt;
+    paretoItems.push({label,cnt,cumPct:motivoTotal?Math.round(cum/motivoTotal*100):0});
+    if(motivoTotal && cum/motivoTotal>=0.8) break;
+  }
 
   // ─ Timing stats ─
   const {stageAvg,deptAvg}=computeTimingStats(stageData,historyRows);
@@ -893,15 +930,24 @@ function Dashboard({stageData,historyRows,onSelectStage}){
 
       {/* Funil do Processo — full-width executive funnel chart */}
       <div style={{...card,marginBottom:20}}>
-        <SectionHeader icon={BarChart3} title="Funil do Processo" color={ACCENT}/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:14}}>
+          <SectionHeader icon={BarChart3} title="Funil do Processo" color={ACCENT}/>
+          {selectedStage!=null&&(
+            <button className="spring-btn" onClick={()=>setSelectedStage(null)} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(10,132,255,0.1)",color:ACCENT,border:"none",borderRadius:8,padding:"5px 11px",fontSize:11,fontWeight:700,cursor:"pointer"}}>
+              Filtro: Etapa {selectedStage} · {filteredStageInfo?.short}
+              <X size={12} strokeWidth={2.6}/>
+            </button>
+          )}
+        </div>
         <div style={{display:"flex",alignItems:"stretch",gap:8}}>
           {STAGES.map((stage,idx)=>{
             const count=stageData[stage.id]?.length||0;
             const maxCount=Math.max(...STAGES.map(s=>stageData[s.id]?.length||0),1);
             const barH=count===0?4:Math.max(6,Math.round(count/maxCount*84));
             const color=STAGE_COLORS[idx];
+            const isSelected=selectedStage===stage.id;
             return(
-              <div key={stage.id} className="spring-btn" onClick={()=>onSelectStage(stage.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer"}}>
+              <div key={stage.id} className="spring-btn" onClick={()=>toggleStageFilter(stage.id)} title="Filtrar dashboard por esta etapa" style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",cursor:"pointer",borderRadius:10,padding:"6px 2px",background:isSelected?hexToRgba(color,0.10):"transparent",boxShadow:isSelected?`0 0 0 2px ${hexToRgba(color,0.5)}`:"none",transition:`all 0.25s ${EASE}`}}>
                 <div style={{fontSize:17,fontWeight:900,color:"#1C1C1E",marginBottom:6,fontFamily:TITLE_FONT,letterSpacing:"-0.5px"}}>{count}</div>
                 <div style={{height:84,display:"flex",alignItems:"flex-end",width:"100%"}}>
                   <div style={{width:"100%",height:barH,background:hexToRgba(color,0.88),borderRadius:6,transition:`height 0.6s ${EASE}`}}/>
@@ -926,11 +972,12 @@ function Dashboard({stageData,historyRows,onSelectStage}){
         </div>
 
         <div style={card}>
-          <SectionHeader icon={Package} title="Bloqueio por Depósito" color="#FF9F0A"/>
+          <SectionHeader icon={Package} title={selectedStage!=null?`Bloqueio por Depósito · E${selectedStage}`:"Bloqueio por Depósito"} color="#FF9F0A"/>
           {!Object.keys(byDep).length?<div style={{fontSize:12,color:"#8E8E93"}}>Nenhum tubo</div>:Object.entries(byDep).sort((a,b)=>b[1]-a[1]).map(([dep,cnt],i)=>{
             const clrs=STAGE_COLORS;
             const col=clrs[i%clrs.length];
-            const pct=total>0?Math.round(cnt/total*100):0;
+            const fTotal=filteredRows.length||1;
+            const pct=Math.round(cnt/fTotal*100);
             return(<div key={dep} style={{marginBottom:11}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}><span style={{fontSize:11,fontWeight:600,color:"#3A3A3C"}}>{dep}</span><span style={{fontSize:12,fontWeight:800,color:col}}>{cnt}</span></div><div style={{height:6,background:"#F2F2F7",borderRadius:3,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:3,transition:`width 0.6s ${EASE}`}}/></div></div>);
           })}
         </div>
@@ -993,6 +1040,39 @@ function Dashboard({stageData,historyRows,onSelectStage}){
                 })}
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Motivos de Bloqueio — Pareto (80% acumulado) */}
+      <div style={{...card,marginBottom:20}}>
+        <SectionHeader icon={PieChart} title={selectedStage!=null?`Motivos de Bloqueio · E${selectedStage}`:"Motivos de Bloqueio"} color="#FF453A"/>
+        {paretoItems.length===0?(
+          <div style={{fontSize:13,color:"#8E8E93",textAlign:"center",padding:"12px 0"}}>
+            Nenhum motivo de bloqueio registrado para os tubos selecionados
+          </div>
+        ):(
+          <div>
+            {paretoItems.map((it,i)=>{
+              const maxCnt=paretoItems[0].cnt;
+              const pct=Math.round(it.cnt/maxCnt*100);
+              const col=STAGE_COLORS[i%STAGE_COLORS.length];
+              return(
+                <div key={it.label} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4,gap:10}}>
+                    <span style={{fontSize:11,fontWeight:600,color:"#3A3A3C",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.label}</span>
+                    <span style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      <span style={{fontSize:12,fontWeight:800,color:col}}>{it.cnt}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:"#8E8E93",background:"#F2F2F7",borderRadius:6,padding:"1px 7px"}}>{it.cumPct}% acum.</span>
+                    </span>
+                  </div>
+                  <div style={{height:7,background:"#F2F2F7",borderRadius:4,overflow:"hidden"}}>
+                    <div style={{width:`${pct}%`,height:"100%",background:col,borderRadius:4,transition:`width 0.6s ${EASE}`}}/>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{fontSize:10,color:"#8E8E93",marginTop:8}}>Principais motivos que somam até 80% do total de tubos bloqueados{selectedStage!=null?` na Etapa ${selectedStage}`:""}.</div>
           </div>
         )}
       </div>
@@ -1062,7 +1142,7 @@ function HistoricoPage({historyRows}){
               <thead>
                 <tr>
                   <th style={{...TH,width:30}}></th>
-                  {["Lote","Tubos","IPPNs","Pedido","Item","Material","Depósito","Motivo Bloqueio","Data Bloqueio","Nº Cassete"].map(h=><th key={h} style={TH}>{h}</th>)}
+                  {["Lote","Tubos","IPPNs","Pedido/Item","Material","Depósito","Motivo Bloqueio","Data Bloqueio","Nº Cassete"].map(h=><th key={h} style={TH}>{h}</th>)}
                   <th style={histTh}>Histórico</th>
                 </tr>
               </thead>
@@ -1077,8 +1157,7 @@ function HistoricoPage({historyRows}){
                       <td style={{...TD(alt),fontWeight:700,color:"#1C1C1E"}}>{group.lote||"—"}</td>
                       <td style={TD(alt)}><span style={{background:"#EDF7EE",color:"#1A7A3A",borderRadius:6,padding:"2px 7px",fontSize:11,fontWeight:700}}>{group.rows.length}</span></td>
                       <td style={{...TD(alt),maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ippnList||"—"}</td>
-                      <td style={TD(alt)}>{group.pedido||"—"}</td>
-                      <td style={TD(alt)}>{group.item||"—"}</td>
+                      <td style={TD(alt)}>{(group.pedido||group.item)?`${group.pedido||"—"}/${group.item||"—"}`:"—"}</td>
                       <td style={TD(alt)}>{group.material||"—"}</td>
                       <td style={TD(alt)}>{group.deposito_sap||"—"}</td>
                       <td style={TD(alt)}>{group.motivo_bloqueio||"—"}</td>
@@ -1100,12 +1179,15 @@ function HistoricoPage({historyRows}){
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURAÇÕES
 // ─────────────────────────────────────────────────────────────────────────────
-function ConfigPage({users,setUsers}){
+function ConfigPage({users,setUsers,faturamento,setFaturamento,stageData}){
   const [tab,setTab]=useState("users");
   const [editing,setEditing]=useState(null); // null or user obj
   const [form,setForm]=useState({});
   const [showDel,setShowDel]=useState(null);
   const [saveMsg,setSaveMsg]=useState("");
+  const [fatForm,setFatForm]=useState({pedido:"",item:"",descricao:""});
+  const [fatLoading,setFatLoading]=useState(false);
+  const [fatError,setFatError]=useState("");
 
   const deptOptions=Object.keys(DEPT_FULL).filter(d=>d!=="Admin");
 
@@ -1132,6 +1214,49 @@ function ConfigPage({users,setUsers}){
     setForm(f=>({...f,dept,allowedStages:DEPT_DEFAULT_STAGES[dept]||[]}));
   }
 
+  // ─ Faturamento: count how many tubes across the whole pipeline match a Pedido/Item ─
+  function countTubos(pedido,item){
+    const p=(pedido||"").trim().toLowerCase(), it=(item||"").trim().toLowerCase();
+    let count=0;
+    Object.values(stageData||{}).forEach(arr=>{
+      (arr||[]).forEach(r=>{
+        if((r.pedido||"").trim().toLowerCase()===p && (r.item||"").trim().toLowerCase()===it) count++;
+      });
+    });
+    return count;
+  }
+  function addFaturamento(){
+    if(!fatForm.pedido||!fatForm.item){setFatError("Informe Pedido e Item.");return;}
+    setFaturamento(f=>{
+      const exists=f.some(x=>x.pedido.trim().toLowerCase()===fatForm.pedido.trim().toLowerCase()&&x.item.trim().toLowerCase()===fatForm.item.trim().toLowerCase());
+      if(exists) return f;
+      return [...f,{id:`fat_${Date.now()}`,pedido:fatForm.pedido.trim(),item:fatForm.item.trim(),descricao:fatForm.descricao.trim()}];
+    });
+    setFatForm({pedido:"",item:"",descricao:""});setFatError("");
+  }
+  function removeFaturamento(id){setFaturamento(f=>f.filter(x=>x.id!==id));}
+  async function importFaturamento(file){
+    if(!file)return;
+    setFatLoading(true);setFatError("");
+    try{
+      const rows=await parseFile(file);
+      if(!rows.length){setFatError("Nenhuma linha válida encontrada.");setFatLoading(false);return;}
+      setFaturamento(f=>{
+        const seen=new Set(f.map(x=>`${x.pedido.trim().toLowerCase()}|${x.item.trim().toLowerCase()}`));
+        const novos=[];
+        rows.forEach((r,i)=>{
+          if(!r.pedido||!r.item) return;
+          const key=`${r.pedido.trim().toLowerCase()}|${r.item.trim().toLowerCase()}`;
+          if(seen.has(key)) return;
+          seen.add(key);
+          novos.push({id:`fat_${Date.now()}_${i}`,pedido:r.pedido.trim(),item:r.item.trim(),descricao:(r.descricao||"").trim()});
+        });
+        return [...f,...novos];
+      });
+    }catch(e){setFatError("Erro ao processar arquivo: "+e.message);}
+    setFatLoading(false);
+  }
+
   const tabStyle=(active)=>({padding:"8px 18px",borderRadius:9,border:"none",fontSize:13,fontWeight:active?700:500,color:active?"#1C1C1E":"#8E8E93",background:active?"#fff":"transparent",cursor:"pointer",boxShadow:active?"0 1px 4px rgba(0,0,0,0.08)":"none",display:"flex",alignItems:"center",gap:6,fontFamily:FONT});
 
   return(
@@ -1139,6 +1264,7 @@ function ConfigPage({users,setUsers}){
       <div style={{display:"flex",gap:2,background:"#E9E9EC",borderRadius:11,padding:3,marginBottom:20,width:"fit-content"}}>
         <button className="spring-btn" style={tabStyle(tab==="users")} onClick={()=>setTab("users")}><Users size={14}/> Usuários</button>
         <button className="spring-btn" style={tabStyle(tab==="perms")} onClick={()=>setTab("perms")}><Shield size={14}/> Permissões</button>
+        <button className="spring-btn" style={tabStyle(tab==="faturamento")} onClick={()=>setTab("faturamento")}><Receipt size={14}/> Faturamento</button>
       </div>
 
       {saveMsg&&<div style={{background:"#EDF7EE",color:"#1A7A3A",borderRadius:10,padding:"8px 14px",marginBottom:14,fontSize:13,fontWeight:600,display:"flex",alignItems:"center",gap:6}}><CheckCircle2 size={14}/>{saveMsg}</div>}
@@ -1196,7 +1322,51 @@ function ConfigPage({users,setUsers}){
         </div>
       )}
 
-      {/* Edit / New user modal */}
+      {tab==="faturamento"&&(
+        <div>
+          <div style={{fontSize:14,fontWeight:700,color:"#3A3A3C",marginBottom:14}}>Pedidos de Faturamento (mês corrente)</div>
+
+          {/* Manual add form */}
+          <div style={{background:"#fff",borderRadius:14,padding:"16px",boxShadow:"0 1px 6px rgba(0,0,0,0.05)",marginBottom:14}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#3A3A3C",marginBottom:10}}>Adicionar manualmente</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr auto",gap:10,alignItems:"end"}}>
+              <div><label style={{fontSize:11,fontWeight:600,color:"#8E8E93",marginBottom:4,display:"block"}}>Pedido *</label><input style={INP} value={fatForm.pedido} onChange={e=>setFatForm(f=>({...f,pedido:e.target.value}))} placeholder="ex: 12000010"/></div>
+              <div><label style={{fontSize:11,fontWeight:600,color:"#8E8E93",marginBottom:4,display:"block"}}>Item *</label><input style={INP} value={fatForm.item} onChange={e=>setFatForm(f=>({...f,item:e.target.value}))} placeholder="ex: 10"/></div>
+              <div><label style={{fontSize:11,fontWeight:600,color:"#8E8E93",marginBottom:4,display:"block"}}>Descrição</label><input style={INP} value={fatForm.descricao} onChange={e=>setFatForm(f=>({...f,descricao:e.target.value}))} placeholder="Descrição do produto"/></div>
+              <Btn icon={Plus} onClick={addFaturamento}>Adicionar</Btn>
+            </div>
+
+            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14,paddingTop:14,borderTop:`1px solid ${SEPARATOR}`}}>
+              <span style={{fontSize:11,fontWeight:600,color:"#8E8E93"}}>ou importar arquivo:</span>
+              <Btn variant="secondary" small icon={fatLoading?Loader2:Upload} onClick={()=>document.getElementById("fatFileInput").click()} disabled={fatLoading}>{fatLoading?"Processando…":"CSV / XLS / XLSX"}</Btn>
+              <input id="fatFileInput" type="file" accept=".csv,.txt,.xls,.xlsx" style={{display:"none"}} onChange={e=>{importFaturamento(e.target.files[0]);e.target.value="";}}/>
+            </div>
+            {fatError&&<div style={{color:"#FF453A",fontSize:12,marginTop:10}}>{fatError}</div>}
+          </div>
+
+          {/* Registered table */}
+          <div style={{background:"#fff",borderRadius:14,boxShadow:"0 1px 6px rgba(0,0,0,0.05)",overflow:"hidden"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+              <thead><tr>{["Pedido/Item","Descrição","Tubos",""].map(h=><th key={h} style={TH}>{h}</th>)}</tr></thead>
+              <tbody>
+                {faturamento.length===0?(
+                  <tr><td colSpan={4} style={{...TD(false),textAlign:"center",color:"#8E8E93",padding:"24px"}}>Nenhum pedido de faturamento cadastrado.</td></tr>
+                ):faturamento.map((f,i)=>(
+                  <tr key={f.id} style={{background:i%2?"#FAFAFB":"#fff"}}>
+                    <td style={{...TD(i%2===1),fontWeight:700,color:"#1C1C1E"}}>{f.pedido}/{f.item}</td>
+                    <td style={{...TD(i%2===1),color:"#555"}}>{f.descricao||"—"}</td>
+                    <td style={TD(i%2===1)}><span style={{background:"#E8F4FD",color:"#1A6FA8",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700}}>{countTubos(f.pedido,f.item)}</span></td>
+                    <td style={TD(i%2===1)}><Btn small variant="danger" icon={Trash2} onClick={()=>removeFaturamento(f.id)}>Excluir</Btn></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:11,color:"#8E8E93",marginTop:8}}>Pedidos cadastrados aqui são destacados em vermelho claro na tabela da Pipeline.</div>
+        </div>
+      )}
+
+
       {editing&&(
         <Modal title={editing==="new"?"Novo Usuário":"Editar Usuário"} onConfirm={saveUser} onCancel={()=>setEditing(null)} confirmLabel="Salvar">
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
@@ -1228,7 +1398,7 @@ function ConfigPage({users,setUsers}){
 // ─────────────────────────────────────────────────────────────────────────────
 // PIPELINE PAGE (main flow view)
 // ─────────────────────────────────────────────────────────────────────────────
-function PipelinePage({stageData,setStageData,user,historyRows,setHistoryRows,showToast,initialStage}){
+function PipelinePage({stageData,setStageData,user,historyRows,setHistoryRows,showToast,initialStage,faturamento}){
   const [activeStage,setActiveStage]=useState(initialStage||1);
   const [filters,setFilters]=useState({pedido_item:"",lotes:"",ippns:"",deposito:""});
 
@@ -1294,6 +1464,8 @@ function PipelinePage({stageData,setStageData,user,historyRows,setHistoryRows,sh
               onAdvance={handleAdvance}
               onReturn={activeStage>1?handleReturn:null}
               onComplete={activeStage===8?handleComplete:null}
+              filters={filters}
+              faturamento={faturamento}
             />
             {activeStage===1&&stageData[1].length>0&&(
               <div style={{marginTop:14}}>
@@ -1326,6 +1498,7 @@ export default function App(){
   const [pipelineTarget,setPipelineTarget]=useState(1);
   const [toast,setToast]=useState("");
   const [showLogout,setShowLogout]=useState(false);
+  const [faturamento,setFaturamento]=useState([]);
 
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(""),3200);}
 
@@ -1347,9 +1520,9 @@ export default function App(){
         <TopBar title={meta.title} subtitle={meta.subtitle} user={user} onLogoutClick={()=>setShowLogout(true)}/>
         <div style={{flex:1,overflowY:"auto"}}>
           {page==="dashboard"&&<Dashboard stageData={stageData} historyRows={historyRows} onSelectStage={goToPipelineStage}/>}
-          {page==="pipeline"&&<PipelinePage key={pipelineTarget} initialStage={pipelineTarget} stageData={stageData} setStageData={setStageData} user={user} historyRows={historyRows} setHistoryRows={setHistoryRows} showToast={showToast}/>}
+          {page==="pipeline"&&<PipelinePage key={pipelineTarget} initialStage={pipelineTarget} stageData={stageData} setStageData={setStageData} user={user} historyRows={historyRows} setHistoryRows={setHistoryRows} showToast={showToast} faturamento={faturamento}/>}
           {page==="historico"&&<HistoricoPage historyRows={historyRows}/>}
-          {page==="configuracoes"&&<ConfigPage users={users} setUsers={setUsers}/>}
+          {page==="configuracoes"&&<ConfigPage users={users} setUsers={setUsers} faturamento={faturamento} setFaturamento={setFaturamento} stageData={stageData}/>}
         </div>
       </div>
 
